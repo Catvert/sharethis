@@ -1,13 +1,13 @@
+#[macro_use] extern crate log;
+
 use axum::{
-    extract::{Path, State, WebSocketUpgrade},
-    response::Html,
-    routing::{get, post},
-    Router,
-    serve
+    extract::{Path, State, WebSocketUpgrade}, response::Html, routing::{delete, get, post}, serve, Router
 };
 use sqlx::SqlitePool;
-use std::sync::Arc;
+use websocket::WsServerMessage;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::broadcast;
+use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 use askama::Template;
 
@@ -20,14 +20,32 @@ use templates::{IndexTemplate, RoomTemplate};
 #[derive(Clone)]
 struct AppState {
     db: SqlitePool,
-    tx: broadcast::Sender<String>,
+    rooms: Arc<RwLock<HashMap<String, broadcast::Sender<WsServerMessage>>>>,
+}
+
+impl AppState {
+    fn new(db: SqlitePool) -> Self {
+        Self {
+            db,
+            rooms: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    async fn get_or_create_room_channel(&self, room: String) -> broadcast::Sender<WsServerMessage> {
+        let mut rooms = self.rooms.write().await;
+        if let Some(tx) = rooms.get(&room) {
+            tx.clone()
+        } else {
+            let (tx, _rx) = broadcast::channel(100);
+            rooms.insert(room.clone(), tx.clone());
+            tx
+        }
+    }
 }
 
 #[tokio::main]
 async fn main() {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
-
+    pretty_env_logger::init();
     dotenvy::dotenv().ok();
     
     // Get database URL from environment
@@ -39,11 +57,8 @@ async fn main() {
         .await
         .expect("Failed to connect to SQLite");
 
-    // Setup broadcast channel for WebSocket messages
-    let (tx, _rx) = broadcast::channel(100);
-
     // Setup shared state
-    let state = Arc::new(AppState { db, tx });
+    let state = Arc::new(AppState::new(db));
 
     // Build router
     let app = Router::new()
@@ -55,7 +70,7 @@ async fn main() {
 
     // Start server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Server running on http://localhost:3000");
+    info!("Server running on http://localhost:3000");
     serve::serve(listener, app).await.unwrap();
 }
 

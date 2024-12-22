@@ -1,5 +1,11 @@
 run: 
-    mprocs
+    just init
+    RUST_LOG=info mprocs
+
+init:
+    mkdir -p ./data
+    sqlx db create
+    sqlx migrate run
 
 build: 
     cargo build

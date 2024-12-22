@@ -13,30 +13,58 @@ const initialContent = editorElement.dataset.initialContent;
 const ws = new WebSocket(`ws://${window.location.host}/ws/${room}`);
 let isReceiving = false;
 
+let content = '';
+
+try {
+    if(initialContent.length > 0) {
+        content = JSON.parse(initialContent);
+    }
+} catch (error) {
+    console.error('Error:', error);
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Initialize Tiptap editor
 const editor = new Editor({
     element: editorElement,
     extensions: [
         StarterKit,
     ],
-    content: initialContent ? JSON.parse(initialContent) : '',
+    content,
     editorProps: {
         attributes: {
             class: 'prose prose-sm sm:prose lg:prose-lg max-w-none focus:outline-none',
         },
     },
-    onUpdate: ({ editor }) => {
+    onUpdate:debounce(({ editor }) => {
         if (!isReceiving) {
             const content = editor.getJSON();
-            ws.send(JSON.stringify(content));
+            ws.send(JSON.stringify({ t: 'UpdateContent', c: { content: JSON.stringify(content) } }));
         }
-    },
+    }, 300)
 });
 
 // WebSocket handlers
 ws.onmessage = (event) => {
     isReceiving = true;
-    editor.commands.setContent(JSON.parse(event.data));
+    let data = JSON.parse(event.data);
+    let command = data.t;
+    if (command === 'UpdatedContent') {
+        editor.commands.setContent(JSON.parse(data.c.content));
+    } else if (command === 'RoomDeleted') {
+        window.location.href = '/';
+    }
     isReceiving = false;
 };
 
@@ -70,3 +98,12 @@ editor.on('selectionUpdate', () => {
         button.classList.toggle('is-active', editor.isActive(type));
     });
 });
+
+const deleteButton = document.getElementById('deleteRoom');
+if (deleteButton) {
+    deleteButton.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
+            ws.send(JSON.stringify({ t: 'DeleteRoom' }));
+        }
+    });
+}
