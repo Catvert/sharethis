@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room: {{ room }}</title>
+
+    {{ vite_assets|safe }}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="font-bold text-red-500">Room: {{ room }}</h1>
+            <a href="/" class="text-blue-500 hover:underline">Back to Home</a>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="editor-toolbar">
+                <button data-type="bold" title="Bold">B</button>
+                <button data-type="italic" title="Italic">I</button>
+                <button data-type="strike" title="Strike">S</button>
+                <button data-type="code" title="Code">{"</>"}</button>
+                <button data-type="h1" title="H1">H1</button>
+                <button data-type="h2" title="H2">H2</button>
+                <button data-type="bullet" title="Bullet List">•</button>
+                <button data-type="number" title="Numbered List">1.</button>
+                <button data-type="quote" title="Blockquote">❝</button>
+            </div>
+            <div id="editor" class="editor-content" data-room="{{ room }}" data-placeholder="Start typing..." data-initial-content="{{ content }}"></div>
+        </div>
+    </div>
+</body>
+
+</html>

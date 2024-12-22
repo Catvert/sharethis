@@ -1,0 +1,5 @@
+procs:
+  cargo:
+    shell: "cargo watch -c -w src -w templates -x run"
+  vite:
+    shell: "npm run dev"

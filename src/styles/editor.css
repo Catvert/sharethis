@@ -1,0 +1,41 @@
+.ProseMirror {
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    min-height: 200px;
+    outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: #adb5bd;
+    pointer-events: none;
+    height: 0;
+}
+
+.editor-toolbar {
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 0.5rem 0.5rem 0 0;
+    padding: 0.5rem;
+    background: #f8f9fa;
+}
+
+.editor-toolbar button {
+    margin-right: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    background: white;
+    cursor: pointer;
+}
+
+.editor-toolbar button.is-active {
+    background: #e9ecef;
+}
+
+.editor-content {
+    border: 1px solid #ccc;
+    border-radius: 0 0 0.5rem 0.5rem;
+}
