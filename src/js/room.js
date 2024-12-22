@@ -1,8 +1,8 @@
-import 'uno.css';
-import '../styles/editor.css';
+import './utils/theme';
 
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import Placeholder from '@tiptap/extension-placeholder'
 
 // Get editor element and its data attributes
 const editorElement = document.querySelector('#editor');
@@ -40,11 +40,14 @@ const editor = new Editor({
     element: editorElement,
     extensions: [
         StarterKit,
+        Placeholder.configure({
+            placeholder: 'Start typing...',
+        }),
     ],
     content,
     editorProps: {
         attributes: {
-            class: 'prose prose-sm sm:prose lg:prose-lg max-w-none focus:outline-none',
+            class: '',
         },
     },
     onUpdate:debounce(({ editor }) => {
@@ -62,6 +65,7 @@ ws.onmessage = (event) => {
     let command = data.t;
     if (command === 'UpdatedContent') {
         editor.commands.setContent(JSON.parse(data.c.content));
+        document.querySelector('#updatedAt').innerText = data.c.updated_at;
     } else if (command === 'RoomDeleted') {
         window.location.href = '/';
     }

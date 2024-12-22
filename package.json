@@ -1,13 +1,16 @@
 {
   "dependencies": {
     "@tiptap/core": "^2.10.4",
+    "@tiptap/extension-placeholder": "^2.10.4",
     "@tiptap/pm": "^2.10.4",
-    "@tiptap/starter-kit": "^2.10.4"
+    "@tiptap/starter-kit": "^2.10.4",
+    "@unocss/reset": "^0.65.2"
   },
   "devDependencies": {
     "@unocss/cli": "^0.65.2",
     "@unocss/preset-typography": "^0.65.2",
     "@unocss/preset-uno": "^0.65.2",
+    "@unocss/preset-web-fonts": "^0.65.2",
     "unocss": "^0.65.2",
     "vite": "^6.0.5"
   },

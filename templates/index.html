@@ -1,38 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Share This</title>
+
+    <script>
+      // Check for saved theme preference or use system preference
+      const theme =
+        localStorage.getItem("theme") ||
+        (window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light");
+      if (theme === "dark") document.documentElement.classList.add("dark");
+    </script>
+
     {{ vite_assets|safe }}
-</head>
-<body class="bg-gray-100 min-h-screen">
+  </head>
+  <body class="bg-base text-base min-h-screen">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6">Create or Join a Room</h1>
-        <div class="bg-white rounded-lg shadow p-6">
-            <form onsubmit="joinRoom(event)">
-                <input 
-                    type="text" 
-                    id="roomInput"
-                    placeholder="Enter room name" 
-                    class="w-full p-2 border rounded mb-4"
-                    required
-                >
-                <button 
-                    type="submit"
-                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                    Join Room
-                </button>
-            </form>
-        </div>
+      <h1 class="text-3xl font-bold mb-6">Create or Join a Room</h1>
+      <div class="bg-white rounded-lg shadow p-6">
+        <form onsubmit="joinRoom(event)">
+          <input
+            type="text"
+            id="roomInput"
+            placeholder="Enter room name"
+            class="w-full p-2 border rounded mb-4"
+            required
+          />
+          <button
+            type="submit"
+            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Join Room
+          </button>
+        </form>
+      </div>
     </div>
     <script>
-        function joinRoom(e) {
-            e.preventDefault();
-            const room = document.getElementById('roomInput').value;
-            window.location.href = `/${room}`;
-        }
+      function joinRoom(e) {
+        e.preventDefault();
+        const room = document.getElementById("roomInput").value;
+        window.location.href = `/${room}`;
+      }
     </script>
-</body>
+  </body>
 </html>

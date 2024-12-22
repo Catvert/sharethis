@@ -1,19 +1,24 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
+use askama::Template;
 use axum::{
-    extract::{Path, State, WebSocketUpgrade}, response::Html, routing::{delete, get, post}, serve, Router
+    extract::{Path, State, WebSocketUpgrade},
+    response::Html,
+    routing::{delete, get, post},
+    serve, Router,
 };
+use chrono::{NaiveDateTime, Utc};
 use sqlx::SqlitePool;
-use websocket::WsServerMessage;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
-use askama::Template;
+use websocket::WsServerMessage;
 
 mod templates;
-mod websocket;
 mod vite;
+mod websocket;
 
 use templates::{IndexTemplate, RoomTemplate};
 
@@ -47,10 +52,10 @@ impl AppState {
 async fn main() {
     pretty_env_logger::init();
     dotenvy::dotenv().ok();
-    
+
     // Get database URL from environment
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set in .env file");
+    let database_url =
+        std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");
 
     // Setup database
     let db = SqlitePool::connect(&database_url)
@@ -63,7 +68,7 @@ async fn main() {
     // Build router
     let app = Router::new()
         .route("/", get(root_handler))
-        .route("/:room", get(room_handler))
+        .route("/:room_id", get(room_handler))
         .route("/ws/:room", get(websocket_handler))
         .nest_service("/assets", ServeDir::new("dist/assets"))
         .with_state(state);
@@ -79,19 +84,38 @@ async fn root_handler() -> Html<String> {
     Html(template.render().unwrap())
 }
 
+#[derive(Debug)]
+struct Room {
+    content: String,
+    updated_at: NaiveDateTime,
+}
+
+impl Default for Room {
+    fn default() -> Self {
+        Self {
+            content: String::new(),
+            updated_at: Utc::now().naive_utc(),
+        }
+    }
+}
+
 async fn room_handler(
-    Path(room): Path<String>,
+    Path(room_id): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Html<String> {
     // Get room content from database
-    let content = sqlx::query_scalar!("SELECT content FROM rooms WHERE id = ?", room)
-        .fetch_optional(&state.db)
-        .await
-        .unwrap()
-        .unwrap_or_default();
+    let room = sqlx::query_as!(
+        Room,
+        "SELECT content, updated_at FROM rooms WHERE id = ?",
+        room_id
+    )
+    .fetch_optional(&state.db)
+    .await
+    .unwrap()
+    .unwrap_or_default();
 
     // Render template with Vite assets
-    let template = RoomTemplate::new(room, content);
+    let template = RoomTemplate::new(room_id.clone(), room);
     Html(template.render().unwrap())
 }
 

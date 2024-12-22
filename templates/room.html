@@ -3,24 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Room: {{ room }}</title>
+    <title>Room: {{ room_id }}</title>
+
+    <script>
+        // Check for saved theme preference or use system preference
+        const theme = localStorage.getItem('theme') || 
+            (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+    </script>
 
     {{ vite_assets|safe }}
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-base text-base min-h-screen font-inter">
     <div class="container mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="font-bold text-red-500">Room: {{ room }}</h1>
-            <div class="flex gap-4">
+            <h1 class="font-bold text-primary text-4xl">Room: {{ room_id }}</h1>
+            <div class="flex items-center gap-4">
+                <span id="updatedAt" class="text-blue-500 font-semibold">{{ updated_at }}</span>
                 <button id="deleteRoom" 
                         class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
                     Delete Room
                 </button>
                 <a href="/" class="text-blue-500 hover:underline">Back to Home</a>
+                <button 
+                    id="theme-toggle"
+                    class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 
+                           hover:bg-gray-200 dark:hover:bg-gray-700
+                           transition-colors"
+                    aria-label="Toggle theme"
+                >
+                    <!-- Moon icon (shown in light mode) -->
+                    <svg 
+                        class="w-5 h-5 block dark:hidden"
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                    >
+                        <path 
+                            stroke-linecap="round" 
+                            stroke-linejoin="round" 
+                            stroke-width="2" 
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                        />
+                    </svg>
+                    <!-- Sun icon (shown in dark mode) -->
+                    <svg 
+                        class="w-5 h-5 hidden dark:block"
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                    >
+                        <path 
+                            stroke-linecap="round" 
+                            stroke-linejoin="round" 
+                            stroke-width="2" 
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                        />
+                    </svg>
+                </button>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="editor-toolbar">
+        <div class="rounded-lg shadow p-6">
+            <div class="border-b border-gray-200 dark:border-gray-700 p-4">
                 <button data-type="bold" title="Bold">B</button>
                 <button data-type="italic" title="Italic">I</button>
                 <button data-type="strike" title="Strike">S</button>
@@ -31,7 +75,7 @@
                 <button data-type="number" title="Numbered List">1.</button>
                 <button data-type="quote" title="Blockquote">❝</button>
             </div>
-            <div id="editor" class="editor-content" data-room="{{ room }}" data-placeholder="Start typing..." data-initial-content="{{ content }}"></div>
+            <div id="editor" class="prose prose-sm sm:prose lg:prose-lg max-w-none focus:outline-none text-2xl leading-3" data-room="{{ room_id }}" data-initial-content="{{ content }}"></div>
         </div>
     </div>
 </body>

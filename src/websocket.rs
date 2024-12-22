@@ -1,4 +1,5 @@
 use axum::extract::ws::{Message, WebSocket};
+use chrono::Utc;
 use futures::{sink::SinkExt, stream::StreamExt};
 use std::sync::Arc;
 use sqlx::SqlitePool;
@@ -20,6 +21,7 @@ pub enum WsClientMessage {
 pub enum WsServerMessage {
     UpdatedContent {
         content: String,
+        updated_at: String,
     },
     RoomDeleted
 }
@@ -65,6 +67,7 @@ pub async fn handle_socket(mut socket: WebSocket, room: String, state: Arc<AppSt
                                 // Only broadcast if database update was successful
                                 let _ = tx.send(WsServerMessage::UpdatedContent {
                                     content,
+                                    updated_at: Utc::now().format("%d-%m-%Y %H:%M:%S").to_string(),
                                 });
                             }
                             Err(e) => {

@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import path from 'path'
 import UnoCSS from 'unocss/vite'
-import { presetUno, presetTypography } from 'unocss'
 
 export default defineConfig({
   root: path.resolve(__dirname, 'src'),
@@ -31,16 +30,6 @@ export default defineConfig({
       logger: {
         debug: true 
       },
-      presets: [
-        presetUno(),
-        presetTypography(),
-      ],
     }),
   ],
-  optimizeDeps: {
-    include: [
-      '@tiptap/core',
-      '@tiptap/starter-kit'
-    ]
-  },
 })
