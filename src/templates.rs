@@ -11,7 +11,7 @@ impl IndexTemplate {
     pub fn new() -> Self {
         let vite = ViteAssets::new();
         Self {
-            vite_assets: vite.get_scripts("index.js"),
+            vite_assets: vite.get_scripts("js/index.js"),
         }
     }
 }
@@ -30,7 +30,7 @@ impl RoomTemplate {
         Self {
             room,
             content,
-            vite_assets: vite.get_scripts("room.js"),
+            vite_assets: vite.get_scripts("js/room.js"),
         }
     }
 }

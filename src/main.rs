@@ -69,8 +69,8 @@ async fn main() {
         .with_state(state);
 
     // Start server
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    info!("Server running on http://localhost:3000");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    info!("Server running on http://localhost:8080");
     serve::serve(listener, app).await.unwrap();
 }
 

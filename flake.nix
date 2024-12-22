@@ -62,6 +62,8 @@ outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
 
         # Development tools
         pkg-config
+        mprocs
+        just
       ];
 
       # System libraries
@@ -77,18 +79,13 @@ outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
 
         # Environment variables
         RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
-        DATABASE_URL = "sqlite:data/collab.db";
 
         shellHook = ''
-          echo "🦀 SQLx CLI development environment loaded!"
-          
-          # Ensure data directory exists with proper permissions
-          mkdir -p ./data
-          chmod 755 ./data
+          echo "🦀 Sharethis development environment loaded!"
           
           # Create .env file if it doesn't exist
           if [ ! -f .env ]; then
-            echo 'DATABASE_URL="sqlite:data/collab.db"' > .env
+            echo 'DATABASE_URL="sqlite:dev-data/sharethis.db"' > .env
             echo "Created .env file"
           fi
 
@@ -98,10 +95,7 @@ outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
 
           # Print available commands
           echo -e "\nAvailable commands:"
-          echo "  sqlx db create     - Create database"
-          echo "  sqlx migrate add   - Create a new migration"
-          echo "  sqlx migrate run   - Run pending migrations"
-          echo "  sqlx migrate revert - Revert last migration"
+          echo "  just run      - Init & Run development server"
         '';
       };
     }

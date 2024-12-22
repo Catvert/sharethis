@@ -7,9 +7,11 @@ export default defineConfig({
   root: path.resolve(__dirname, 'src'),
   build: {
     outDir: path.resolve(__dirname, 'dist'),
+    manifest: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'src/js/main.js')
+        main: path.resolve(__dirname, 'src/js/index.js'),
+        room: path.resolve(__dirname, 'src/js/room.js')
       }
     }
   },

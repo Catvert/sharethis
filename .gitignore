@@ -1,3 +1,7 @@
 /target
 data
+dev-data
 dist/assets
+.direnv
+dist/.vite
+.env

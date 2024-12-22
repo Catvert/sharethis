@@ -1,0 +1,9 @@
+target/
+node_modules/
+dist/assets/
+*.sqlite
+.env
+Dockerfile
+docker-compose.yml
+.git/
+.gitignore
