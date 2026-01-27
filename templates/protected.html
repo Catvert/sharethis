@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room_id }} - ShareThis{% endblock %}
+
+{% block extra_styles %}
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-light);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 400px;
+}
+
+h1 {
+    color: var(--magenta);
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.room-id {
+    color: var(--yellow);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.views-info {
+    color: var(--fg-dim);
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+
+.input-group {
+    margin-bottom: 1rem;
+}
+
+.input-group .input {
+    width: 100%;
+    padding: 0.8rem;
+}
+
+.unlock-btn {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1rem;
+}
+
+.error {
+    color: var(--red);
+    margin-top: 1rem;
+    display: none;
+}
+
+.content-box {
+    display: none;
+    text-align: left;
+    margin-top: 1.5rem;
+}
+
+.content-box pre {
+    background: var(--bg);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--green);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.copy-btn {
+    width: 100%;
+    margin-top: 0.8rem;
+}
+
+.warning {
+    background: var(--yellow);
+    color: var(--bg);
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+}
+
+.back-link {
+    margin-top: 1rem;
+    text-align: center;
+}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>Room protégée</h1>
+    <div class="room-id">{{ room_id }}</div>
+    <div class="views-info">{{ views_info }}</div>
+
+    <div id="unlockForm">
+        <div class="input-group">
+            <input type="password" class="input" id="password" placeholder="Mot de passe">
+        </div>
+        <button class="btn btn-primary unlock-btn" onclick="unlock()">Déverrouiller</button>
+        <div class="error" id="error"></div>
+    </div>
+
+    <div class="content-box" id="contentBox">
+        <pre id="content"></pre>
+        <div class="warning" id="warning" style="display:none;"></div>
+        <button class="btn btn-info copy-btn" onclick="copyRoomContent()">Copier le contenu</button>
+        <p class="back-link"><a href="/">Retour à l'accueil</a></p>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+const roomId = '{{ room_id }}';
+
+async function unlock() {
+    const password = document.getElementById('password').value;
+    const error = document.getElementById('error');
+
+    try {
+        const res = await fetch(`/api/room/${roomId}/unlock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            document.getElementById('unlockForm').style.display = 'none';
+            document.getElementById('contentBox').style.display = 'block';
+            document.getElementById('content').textContent = data.content;
+
+            if (data.last_view) {
+                document.getElementById('warning').style.display = 'block';
+                document.getElementById('warning').textContent =
+                    'Cette room a été supprimée après cette lecture.';
+            } else if (data.views_remaining !== null) {
+                document.getElementById('warning').style.display = 'block';
+                document.getElementById('warning').textContent =
+                    `${data.views_remaining} ouverture(s) restante(s)`;
+            }
+        } else if (data.expired) {
+            error.textContent = 'Cette room a expiré.';
+            error.style.display = 'block';
+        } else {
+            error.textContent = 'Mot de passe incorrect';
+            error.style.display = 'block';
+        }
+    } catch (e) {
+        error.textContent = 'Erreur réseau';
+        error.style.display = 'block';
+    }
+}
+
+function copyRoomContent() {
+    const content = document.getElementById('content').textContent;
+    copyToClipboard(content, 'Contenu copié !');
+}
+
+document.getElementById('password').addEventListener('keypress', e => {
+    if (e.key === 'Enter') unlock();
+});
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}ShareThis - Partage de texte en temps réel{% endblock %}
+
+{% block extra_styles %}
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    text-align: center;
+    padding: 2rem;
+}
+
+h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    color: var(--blue);
+}
+
+.subtitle {
+    color: var(--fg-dim);
+    margin-bottom: 3rem;
+    font-size: 1.1rem;
+}
+
+.create-btn {
+    display: inline-block;
+    padding: 1rem 3rem;
+    font-size: 1.1rem;
+    background: var(--green);
+    color: var(--bg);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-weight: bold;
+}
+
+.create-btn:hover {
+    background: #7cb668;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.features {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.feature {
+    background: var(--bg-light);
+    padding: 1.5rem;
+    border-radius: 8px;
+    width: 200px;
+    border: 1px solid var(--border);
+}
+
+.feature-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--cyan);
+}
+
+.feature h3 {
+    margin-bottom: 0.5rem;
+    color: var(--magenta);
+    font-size: 1rem;
+}
+
+.feature p {
+    color: var(--fg-dim);
+    font-size: 0.85rem;
+}
+
+.join-section {
+    margin-top: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.join-input {
+    width: 180px;
+}
+
+.join-btn {
+    padding: 0.7rem 1.2rem;
+    border-radius: 6px;
+}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>ShareThis</h1>
+    <p class="subtitle">Partage de texte en temps réel, sécurisé</p>
+    <a href="/new" class="create-btn">+ Nouvelle room</a>
+    <div class="join-section">
+        <input type="text" class="input join-input" id="roomId" placeholder="Code room">
+        <button class="btn btn-info join-btn" onclick="joinRoom()">Rejoindre</button>
+    </div>
+    <div class="features">
+        <div class="feature">
+            <div class="feature-icon">~</div>
+            <h3>Temps réel</h3>
+            <p>Synchronisation instantanée via WebSocket</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">#</div>
+            <h3>Protégé</h3>
+            <p>Mot de passe et limite d'ouvertures</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">@</div>
+            <h3>Éphémère</h3>
+            <p>Auto-destruction après X lectures</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+function joinRoom() {
+    const id = document.getElementById('roomId').value.trim();
+    if (id) window.location.href = '/room/' + id;
+}
+
+document.getElementById('roomId').addEventListener('keypress', e => {
+    if (e.key === 'Enter') joinRoom();
+});
+{% endblock %}

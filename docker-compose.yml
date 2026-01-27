@@ -1,0 +1,22 @@
+services:
+  sharethis:
+    build: .
+    container_name: sharethis
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MAX_FILE_SIZE=10485760      # 10MB
+      - P2P_THRESHOLD=5242880       # 5MB
+      - DATABASE_PATH=/app/data/sharethis.db
+    volumes:
+      - sharethis-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  sharethis-data:

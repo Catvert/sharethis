@@ -1,0 +1,860 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room_id }} - ShareThis{% endblock %}
+
+{% block extra_styles %}
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    background: var(--bg-light);
+    border-bottom: 1px solid var(--border);
+}
+
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--blue);
+}
+
+.room-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.room-id {
+    background: var(--border);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--yellow);
+}
+
+.room-id:hover { background: #4b5263; }
+
+.users-count {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--fg-dim);
+    font-size: 0.9rem;
+}
+
+.status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+}
+
+.status.connected { background: var(--green); }
+
+.persistent-badge {
+    background: var(--magenta);
+    color: var(--bg);
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    min-height: 0;
+}
+
+.editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+#editor {
+    flex: 1;
+    width: 100%;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    color: var(--fg);
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: none;
+    line-height: 1.6;
+}
+
+#editor:focus {
+    outline: none;
+    border-color: var(--blue);
+}
+
+.toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.files-panel {
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-light);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.files-header {
+    padding: 0.8rem;
+    border-bottom: 1px solid var(--border);
+    font-weight: bold;
+    color: var(--cyan);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.files-header span {
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+    font-weight: normal;
+}
+
+.drop-zone {
+    padding: 1.5rem;
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    margin: 0.8rem;
+    text-align: center;
+    color: var(--fg-dim);
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: rgba(97, 175, 239, 0.1);
+}
+
+.drop-zone input {
+    display: none;
+}
+
+.files-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem;
+    background: var(--bg);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.file-item:hover {
+    background: var(--border);
+}
+
+.file-icon {
+    font-size: 1.2rem;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--fg);
+}
+
+.file-meta {
+    font-size: 0.75rem;
+    color: var(--fg-dim);
+    display: flex;
+    gap: 0.5rem;
+}
+
+.file-p2p {
+    color: var(--yellow);
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.file-btn {
+    background: none;
+    border: none;
+    color: var(--fg-dim);
+    cursor: pointer;
+    padding: 0.2rem;
+    font-size: 0.9rem;
+}
+
+.file-btn:hover {
+    color: var(--blue);
+}
+
+.file-btn.delete:hover {
+    color: var(--red);
+}
+
+.upload-progress {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 0.3rem;
+    overflow: hidden;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background: var(--green);
+    transition: width 0.2s;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal.show { display: flex; }
+
+.modal-content {
+    background: var(--bg-light);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 400px;
+}
+
+.modal h2 {
+    color: var(--magenta);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.modal-input {
+    width: 100%;
+    margin-bottom: 0.8rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.modal-actions .btn { flex: 1; }
+
+label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: var(--fg-dim);
+    font-size: 0.85rem;
+}
+
+.help-text {
+    color: var(--fg-dim);
+    font-size: 0.8rem;
+    margin-top: -0.5rem;
+    margin-bottom: 0.8rem;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+    }
+    .files-panel {
+        width: 100%;
+        max-height: 250px;
+    }
+}
+{% endblock %}
+
+{% block body %}
+<header>
+    <a href="/" class="logo">ShareThis</a>
+    <div class="room-info">
+        <div class="status" id="status"></div>
+        <span class="room-id" onclick="copyLink()" title="Copier le lien">{{ room_id }}</span>
+        <span id="persistentBadge" class="persistent-badge" style="display:none;">Sauvegardée</span>
+        <div class="users-count">
+            <span id="userCount">1</span> en ligne
+        </div>
+    </div>
+</header>
+
+<div class="main-content">
+    <div class="editor-panel">
+        <textarea id="editor" placeholder="Écrivez ici... Le texte est synchronisé en temps réel."></textarea>
+        <div class="toolbar">
+            <button class="btn btn-secondary" onclick="clearEditor()">Effacer</button>
+            <button class="btn btn-secondary" onclick="copyContent()">Copier</button>
+            <button class="btn btn-accent" onclick="showSaveModal()">Sauvegarder</button>
+            <button class="btn btn-primary" onclick="copyLink()">Partager</button>
+        </div>
+    </div>
+
+    <div class="files-panel">
+        <div class="files-header">
+            Fichiers
+            <span id="filesCount">0</span>
+        </div>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" multiple>
+            Glisser des fichiers ici<br>ou cliquer pour sélectionner
+        </div>
+        <div class="files-list" id="filesList"></div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="saveModal">
+    <div class="modal-content">
+        <h2>Sauvegarder la room</h2>
+        <label for="savePassword">Mot de passe</label>
+        <input type="password" class="input modal-input" id="savePassword" placeholder="Mot de passe pour accéder">
+
+        <label for="maxViews">Nombre d'ouvertures max</label>
+        <input type="number" class="input modal-input" id="maxViews" placeholder="Laisser vide = illimité" min="1">
+        <p class="help-text">La room sera supprimée après ce nombre de lectures</p>
+
+        <label for="expiresIn">Expiration</label>
+        <select class="input modal-input" id="expiresIn">
+            <option value="3600">1 heure</option>
+            <option value="14400">4 heures</option>
+            <option value="86400" selected>1 jour</option>
+            <option value="259200">3 jours</option>
+            <option value="432000">5 jours</option>
+            <option value="604800">1 semaine</option>
+            <option value="2592000">30 jours (max)</option>
+        </select>
+        <p class="help-text">La room sera supprimée après ce délai (max 30 jours)</p>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <input type="checkbox" id="persistentCheck" checked>
+            <label for="persistentCheck" style="margin: 0; cursor: pointer;">Persistante (sauvegardée en base)</label>
+        </div>
+        <p class="help-text">Décocher pour une protection temporaire (perdue au redémarrage)</p>
+
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeSaveModal()">Annuler</button>
+            <button class="btn btn-accent" onclick="saveRoom()">Sauvegarder</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+const roomId = '{{ room_id }}';
+const maxFileSize = {{ max_file_size }};
+const p2pThreshold = {{ p2p_threshold }};
+
+const editor = document.getElementById('editor');
+const status = document.getElementById('status');
+const userCount = document.getElementById('userCount');
+const saveModal = document.getElementById('saveModal');
+const persistentBadge = document.getElementById('persistentBadge');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const filesList = document.getElementById('filesList');
+const filesCount = document.getElementById('filesCount');
+
+let ws;
+let userId;
+let isUpdating = false;
+let files = [];
+let p2pFiles = new Map(); // fileId -> { data, peers }
+let peerConnections = new Map(); // odal peerId -> RTCPeerConnection
+
+// ============================================================================
+// WebSocket
+// ============================================================================
+
+function connect() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${location.host}/ws/${roomId}`);
+
+    ws.onopen = () => status.classList.add('connected');
+    ws.onclose = () => {
+        status.classList.remove('connected');
+        setTimeout(connect, 2000);
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+            case 'init':
+                userId = data.userId;
+                editor.value = data.content;
+                userCount.textContent = data.users;
+                loadFiles();
+                break;
+            case 'content':
+                isUpdating = true;
+                const pos = editor.selectionStart;
+                editor.value = data.content;
+                editor.setSelectionRange(pos, pos);
+                isUpdating = false;
+                break;
+            case 'users':
+                userCount.textContent = data.count;
+                break;
+            case 'file_added':
+                addFileToList(data.file);
+                break;
+            case 'file_removed':
+                removeFileFromList(data.file_id);
+                break;
+            case 'p2p_signal':
+                handleP2PSignal(data.from, data.signal);
+                break;
+            case 'p2p_request':
+                handleP2PRequest(data.from, data.file_id);
+                break;
+        }
+    };
+}
+
+// ============================================================================
+// Editor
+// ============================================================================
+
+editor.addEventListener('input', () => {
+    if (!isUpdating && ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'content', content: editor.value }));
+    }
+});
+
+function copyLink() {
+    copyToClipboard(window.location.href, 'Lien copié !');
+}
+
+function copyContent() {
+    copyToClipboard(editor.value, 'Contenu copié !');
+}
+
+function clearEditor() {
+    editor.value = '';
+    if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'content', content: '' }));
+    }
+}
+
+// ============================================================================
+// Save Modal
+// ============================================================================
+
+function showSaveModal() {
+    saveModal.classList.add('show');
+}
+
+function closeSaveModal() {
+    saveModal.classList.remove('show');
+}
+
+async function saveRoom() {
+    const password = document.getElementById('savePassword').value;
+    const maxViews = document.getElementById('maxViews').value;
+    const expiresIn = document.getElementById('expiresIn').value;
+    const persistent = document.getElementById('persistentCheck').checked;
+
+    if (!password) {
+        showToast('Mot de passe requis', true);
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/room/${roomId}/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                password,
+                max_views: maxViews ? parseInt(maxViews) : null,
+                expires_in: parseInt(expiresIn),
+                persistent
+            })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data.persistent) {
+                showToast('Room sauvegardée !');
+                persistentBadge.style.display = 'inline';
+            } else {
+                showToast('Room protégée (temporaire)');
+                persistentBadge.style.display = 'inline';
+                persistentBadge.textContent = 'Protégée';
+                persistentBadge.style.background = 'var(--yellow)';
+            }
+            closeSaveModal();
+        } else {
+            showToast('Erreur de sauvegarde', true);
+        }
+    } catch (e) {
+        showToast('Erreur réseau', true);
+    }
+}
+
+// ============================================================================
+// Files
+// ============================================================================
+
+async function loadFiles() {
+    try {
+        const res = await fetch(`/api/room/${roomId}/files`);
+        files = await res.json();
+        renderFiles();
+    } catch (e) {
+        console.error('Failed to load files:', e);
+    }
+}
+
+function renderFiles() {
+    filesList.innerHTML = '';
+    filesCount.textContent = files.length;
+
+    files.forEach(file => {
+        const el = createFileElement(file);
+        filesList.appendChild(el);
+    });
+}
+
+function addFileToList(file) {
+    if (!files.find(f => f.id === file.id)) {
+        files.push(file);
+        renderFiles();
+    }
+}
+
+function removeFileFromList(fileId) {
+    files = files.filter(f => f.id !== fileId);
+    renderFiles();
+}
+
+function createFileElement(file) {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.dataset.fileId = file.id;
+
+    const icon = getFileIcon(file.mime_type);
+    const size = formatSize(file.size);
+
+    div.innerHTML = `
+        <span class="file-icon">${icon}</span>
+        <div class="file-info">
+            <div class="file-name" title="${file.name}">${file.name}</div>
+            <div class="file-meta">
+                <span>${size}</span>
+                ${file.is_p2p ? '<span class="file-p2p">P2P</span>' : ''}
+            </div>
+        </div>
+        <div class="file-actions">
+            <button class="file-btn download" onclick="downloadFile('${file.id}', ${file.is_p2p})" title="Télécharger">
+                &darr;
+            </button>
+            <button class="file-btn delete" onclick="deleteFile('${file.id}')" title="Supprimer">
+                &times;
+            </button>
+        </div>
+    `;
+
+    return div;
+}
+
+function getFileIcon(mimeType) {
+    if (mimeType.startsWith('image/')) return '🖼';
+    if (mimeType.startsWith('video/')) return '🎬';
+    if (mimeType.startsWith('audio/')) return '🎵';
+    if (mimeType.includes('pdf')) return '📄';
+    if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('tar')) return '📦';
+    if (mimeType.includes('text') || mimeType.includes('javascript') || mimeType.includes('json')) return '📝';
+    return '📎';
+}
+
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// ============================================================================
+// Drag & Drop
+// ============================================================================
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+    fileInput.value = '';
+});
+
+async function handleFiles(fileList) {
+    for (const file of fileList) {
+        if (file.size > maxFileSize) {
+            showToast(`${file.name} trop volumineux (max ${formatSize(maxFileSize)})`, true);
+            continue;
+        }
+        await uploadFile(file);
+    }
+}
+
+async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('owner_id', userId);
+
+    // If P2P, keep data locally
+    if (file.size > p2pThreshold) {
+        const arrayBuffer = await file.arrayBuffer();
+        // Store temporarily until upload confirms
+        const tempId = 'temp_' + Date.now();
+        p2pFiles.set(tempId, { data: arrayBuffer, name: file.name });
+    }
+
+    try {
+        const res = await fetch(`/api/room/${roomId}/files`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (res.ok) {
+            const result = await res.json();
+            if (result.file.is_p2p) {
+                // Move data to correct file ID
+                const arrayBuffer = await file.arrayBuffer();
+                p2pFiles.set(result.file.id, { data: arrayBuffer, name: file.name });
+            }
+            showToast(`${file.name} uploadé !`);
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Erreur upload', true);
+        }
+    } catch (e) {
+        showToast('Erreur réseau', true);
+    }
+}
+
+async function downloadFile(fileId, isP2P) {
+    if (isP2P) {
+        // Check if we have it locally
+        if (p2pFiles.has(fileId)) {
+            const { data, name } = p2pFiles.get(fileId);
+            downloadBlob(new Blob([data]), name);
+            return;
+        }
+        // Request from owner via P2P
+        ws.send(JSON.stringify({ type: 'p2p_request', file_id: fileId }));
+        showToast('Demande P2P envoyée...');
+        return;
+    }
+
+    // Direct download
+    window.open(`/api/room/${roomId}/files/${fileId}`, '_blank');
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function deleteFile(fileId) {
+    try {
+        const res = await fetch(`/api/room/${roomId}/files/${fileId}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            p2pFiles.delete(fileId);
+            showToast('Fichier supprimé');
+        }
+    } catch (e) {
+        showToast('Erreur suppression', true);
+    }
+}
+
+// ============================================================================
+// P2P WebRTC
+// ============================================================================
+
+const rtcConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' }
+    ]
+};
+
+function handleP2PRequest(fromPeer, fileId) {
+    // Someone wants a file we own
+    if (!p2pFiles.has(fileId)) return;
+
+    const pc = new RTCPeerConnection(rtcConfig);
+    peerConnections.set(fromPeer, pc);
+
+    const channel = pc.createDataChannel('file');
+    channel.binaryType = 'arraybuffer';
+
+    channel.onopen = () => {
+        const { data, name } = p2pFiles.get(fileId);
+        // Send metadata first
+        channel.send(JSON.stringify({ type: 'meta', name, size: data.byteLength }));
+        // Send file in chunks
+        const chunkSize = 16384;
+        for (let i = 0; i < data.byteLength; i += chunkSize) {
+            channel.send(data.slice(i, i + chunkSize));
+        }
+        channel.send(JSON.stringify({ type: 'done' }));
+    };
+
+    pc.onicecandidate = (e) => {
+        if (e.candidate) {
+            ws.send(JSON.stringify({
+                type: 'p2p_signal',
+                to: fromPeer,
+                signal: { type: 'candidate', candidate: e.candidate }
+            }));
+        }
+    };
+
+    pc.createOffer().then(offer => {
+        pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({
+            type: 'p2p_signal',
+            to: fromPeer,
+            signal: { type: 'offer', sdp: offer }
+        }));
+    });
+}
+
+function handleP2PSignal(fromPeer, signal) {
+    if (signal.type === 'offer') {
+        // Receiving an offer - we requested a file
+        const pc = new RTCPeerConnection(rtcConfig);
+        peerConnections.set(fromPeer, pc);
+
+        let fileMeta = null;
+        let chunks = [];
+
+        pc.ondatachannel = (e) => {
+            const channel = e.channel;
+            channel.binaryType = 'arraybuffer';
+
+            channel.onmessage = (msg) => {
+                if (typeof msg.data === 'string') {
+                    const data = JSON.parse(msg.data);
+                    if (data.type === 'meta') {
+                        fileMeta = data;
+                        showToast(`Réception: ${data.name}`);
+                    } else if (data.type === 'done') {
+                        const blob = new Blob(chunks);
+                        downloadBlob(blob, fileMeta.name);
+                        showToast('Téléchargement P2P terminé !');
+                        pc.close();
+                        peerConnections.delete(fromPeer);
+                    }
+                } else {
+                    chunks.push(msg.data);
+                }
+            };
+        };
+
+        pc.onicecandidate = (e) => {
+            if (e.candidate) {
+                ws.send(JSON.stringify({
+                    type: 'p2p_signal',
+                    to: fromPeer,
+                    signal: { type: 'candidate', candidate: e.candidate }
+                }));
+            }
+        };
+
+        pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        pc.createAnswer().then(answer => {
+            pc.setLocalDescription(answer);
+            ws.send(JSON.stringify({
+                type: 'p2p_signal',
+                to: fromPeer,
+                signal: { type: 'answer', sdp: answer }
+            }));
+        });
+
+    } else if (signal.type === 'answer') {
+        const pc = peerConnections.get(fromPeer);
+        if (pc) {
+            pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        }
+
+    } else if (signal.type === 'candidate') {
+        const pc = peerConnections.get(fromPeer);
+        if (pc) {
+            pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        }
+    }
+}
+
+// ============================================================================
+// Init
+// ============================================================================
+
+fetch(`/api/room/${roomId}/info`)
+    .then(r => r.json())
+    .then(info => {
+        if (info.is_persistent) {
+            persistentBadge.style.display = 'inline';
+        }
+    });
+
+connect();
+{% endblock %}

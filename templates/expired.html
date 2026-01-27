@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Room expirée - ShareThis{% endblock %}
+
+{% block extra_styles %}
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    text-align: center;
+    padding: 2rem;
+}
+
+h1 {
+    color: var(--red);
+    margin-bottom: 1rem;
+}
+
+p {
+    color: var(--fg-dim);
+    margin-bottom: 2rem;
+}
+
+.home-btn {
+    display: inline-block;
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>Room expirée</h1>
+    <p>Cette room a atteint son nombre maximum d'ouvertures et a été supprimée.</p>
+    <a href="/" class="btn btn-info home-btn">Retour à l'accueil</a>
+</div>
+{% endblock %}
