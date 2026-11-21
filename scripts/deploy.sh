@@ -26,6 +26,8 @@ docker run -d \
   -e MAX_FILE_SIZE=10485760 \
   -e P2P_THRESHOLD=5242880 \
   -e DATABASE_PATH=/app/data/sharethis.db \
+  -e DATABASE_URL="${DATABASE_URL:-}" \
+  -e STORAGE_DIR=/app/data/files \
   -v sharethis-data:/app/data \
   $DOCKER_USER/$IMAGE_NAME:latest
 

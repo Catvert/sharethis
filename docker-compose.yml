@@ -10,10 +10,13 @@ services:
       - MAX_FILE_SIZE=10485760      # 10MB
       - P2P_THRESHOLD=5242880       # 5MB
       - DATABASE_PATH=/app/data/sharethis.db
+      # MariaDB instead of SQLite: see docker-compose.mariadb.yml
+      - DATABASE_URL=${DATABASE_URL:-}
+      - STORAGE_DIR=/app/data/files
     volumes:
       - sharethis-data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3

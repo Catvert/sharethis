@@ -1,0 +1,29 @@
+# Run with MariaDB instead of SQLite:
+#   docker compose -f docker-compose.yml -f docker-compose.mariadb.yml up -d
+services:
+  sharethis:
+    environment:
+      - DATABASE_URL=mariadb://sharethis:${MARIADB_PASSWORD:-change-me}@mariadb:3306/sharethis
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:11
+    container_name: sharethis-mariadb
+    restart: unless-stopped
+    environment:
+      - MARIADB_DATABASE=sharethis
+      - MARIADB_USER=sharethis
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD:-change-me}
+      - MARIADB_RANDOM_ROOT_PASSWORD=1
+    volumes:
+      - sharethis-mariadb:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sharethis-mariadb:
