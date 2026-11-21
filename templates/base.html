@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
     <title>{% block title %}ShareThis{% endblock %}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -81,21 +82,7 @@
 <body>
     {% block body %}{% endblock %}
 
-    <script>
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            if (!toast) return;
-            toast.textContent = message;
-            toast.className = 'toast show' + (isError ? ' error' : '');
-            setTimeout(() => toast.className = 'toast', 2000);
-        }
-
-        function copyToClipboard(text, successMsg = 'Copié !') {
-            navigator.clipboard.writeText(text);
-            showToast(successMsg);
-        }
-
-        {% block extra_scripts %}{% endblock %}
-    </script>
+    <script src="/static/common.js"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

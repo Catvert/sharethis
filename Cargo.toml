@@ -1,23 +1,28 @@
 [package]
 name = "sharethis"
-version = "0.1.0"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.94"
 
 [dependencies]
-axum = { version = "0.7", features = ["ws", "multipart"] }
+axum = { version = "0.8", features = ["ws", "multipart"] }
 tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.5", features = ["fs", "cors", "limit"] }
+tokio-util = { version = "0.7", features = ["io"] }
+tower-http = { version = "0.7", features = ["limit", "set-header"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-uuid = { version = "1", features = ["v4"] }
 dashmap = "6"
 futures = "0.3"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-rusqlite = { version = "0.31", features = ["bundled"] }
-bcrypt = "0.15"
-tokio-rusqlite = "0.5"
-askama = "0.12"
-askama_axum = "0.4"
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "any", "sqlite-bundled", "mysql"] }
+bcrypt = "0.19"
+askama = "0.16"
 dotenvy = "0.15"
 mime_guess = "2"
+rand = "0.10"
+
+[dev-dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["json", "multipart"] }
+tokio-tungstenite = "0.30"
+tempfile = "3"

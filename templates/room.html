@@ -57,15 +57,6 @@ header {
 
 .status.connected { background: var(--green); }
 
-.persistent-badge {
-    background: var(--magenta);
-    color: var(--bg);
-    padding: 0.2rem 0.5rem;
-    border-radius: 3px;
-    font-size: 0.75rem;
-    font-weight: bold;
-}
-
 .main-content {
     flex: 1;
     display: flex;
@@ -308,12 +299,11 @@ label {
 {% endblock %}
 
 {% block body %}
-<header>
+<header id="app" data-room-id="{{ room_id }}" data-max-file-size="{{ max_file_size }}" data-p2p-threshold="{{ p2p_threshold }}" data-max-content-size="{{ max_content_size }}">
     <a href="/" class="logo">ShareThis</a>
     <div class="room-info">
         <div class="status" id="status"></div>
-        <span class="room-id" onclick="copyLink()" title="Copier le lien">{{ room_id }}</span>
-        <span id="persistentBadge" class="persistent-badge" style="display:none;">Sauvegardée</span>
+        <span class="room-id" id="roomIdBadge" title="Copier le lien">{{ room_id }}</span>
         <div class="users-count">
             <span id="userCount">1</span> en ligne
         </div>
@@ -324,10 +314,10 @@ label {
     <div class="editor-panel">
         <textarea id="editor" placeholder="Écrivez ici... Le texte est synchronisé en temps réel."></textarea>
         <div class="toolbar">
-            <button class="btn btn-secondary" onclick="clearEditor()">Effacer</button>
-            <button class="btn btn-secondary" onclick="copyContent()">Copier</button>
-            <button class="btn btn-accent" onclick="showSaveModal()">Sauvegarder</button>
-            <button class="btn btn-primary" onclick="copyLink()">Partager</button>
+            <button class="btn btn-secondary" id="clearBtn">Effacer</button>
+            <button class="btn btn-secondary" id="copyBtn">Copier</button>
+            <button class="btn btn-accent" id="saveBtn">Sauvegarder</button>
+            <button class="btn btn-primary" id="shareBtn">Partager</button>
         </div>
     </div>
 
@@ -336,7 +326,7 @@ label {
             Fichiers
             <span id="filesCount">0</span>
         </div>
-        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-zone" id="dropZone">
             <input type="file" id="fileInput" multiple>
             Glisser des fichiers ici<br>ou cliquer pour sélectionner
         </div>
@@ -348,9 +338,10 @@ label {
 
 <div class="modal" id="saveModal">
     <div class="modal-content">
-        <h2>Sauvegarder la room</h2>
+        <h2>Protéger la room</h2>
+        <p class="help-text" style="margin-top:0">Le texte et les fichiers seront figés et accessibles en lecture seule avec le mot de passe. L'édition en temps réel s'arrêtera pour tous.</p>
         <label for="savePassword">Mot de passe</label>
-        <input type="password" class="input modal-input" id="savePassword" placeholder="Mot de passe pour accéder">
+        <input type="password" class="input modal-input" id="savePassword" placeholder="Mot de passe pour accéder" maxlength="72">
 
         <label for="maxViews">Nombre d'ouvertures max</label>
         <input type="number" class="input modal-input" id="maxViews" placeholder="Laisser vide = illimité" min="1">
@@ -375,486 +366,11 @@ label {
         <p class="help-text">Décocher pour une protection temporaire (perdue au redémarrage)</p>
 
         <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeSaveModal()">Annuler</button>
-            <button class="btn btn-accent" onclick="saveRoom()">Sauvegarder</button>
+            <button class="btn btn-secondary" id="cancelSaveBtn">Annuler</button>
+            <button class="btn btn-accent" id="confirmSaveBtn">Sauvegarder</button>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
-const roomId = '{{ room_id }}';
-const maxFileSize = {{ max_file_size }};
-const p2pThreshold = {{ p2p_threshold }};
-
-const editor = document.getElementById('editor');
-const status = document.getElementById('status');
-const userCount = document.getElementById('userCount');
-const saveModal = document.getElementById('saveModal');
-const persistentBadge = document.getElementById('persistentBadge');
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const filesList = document.getElementById('filesList');
-const filesCount = document.getElementById('filesCount');
-
-let ws;
-let userId;
-let isUpdating = false;
-let files = [];
-let p2pFiles = new Map(); // fileId -> { data, peers }
-let peerConnections = new Map(); // odal peerId -> RTCPeerConnection
-
-// ============================================================================
-// WebSocket
-// ============================================================================
-
-function connect() {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${protocol}//${location.host}/ws/${roomId}`);
-
-    ws.onopen = () => status.classList.add('connected');
-    ws.onclose = () => {
-        status.classList.remove('connected');
-        setTimeout(connect, 2000);
-    };
-
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        switch (data.type) {
-            case 'init':
-                userId = data.userId;
-                editor.value = data.content;
-                userCount.textContent = data.users;
-                loadFiles();
-                break;
-            case 'content':
-                isUpdating = true;
-                const pos = editor.selectionStart;
-                editor.value = data.content;
-                editor.setSelectionRange(pos, pos);
-                isUpdating = false;
-                break;
-            case 'users':
-                userCount.textContent = data.count;
-                break;
-            case 'file_added':
-                addFileToList(data.file);
-                break;
-            case 'file_removed':
-                removeFileFromList(data.file_id);
-                break;
-            case 'p2p_signal':
-                handleP2PSignal(data.from, data.signal);
-                break;
-            case 'p2p_request':
-                handleP2PRequest(data.from, data.file_id);
-                break;
-        }
-    };
-}
-
-// ============================================================================
-// Editor
-// ============================================================================
-
-editor.addEventListener('input', () => {
-    if (!isUpdating && ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'content', content: editor.value }));
-    }
-});
-
-function copyLink() {
-    copyToClipboard(window.location.href, 'Lien copié !');
-}
-
-function copyContent() {
-    copyToClipboard(editor.value, 'Contenu copié !');
-}
-
-function clearEditor() {
-    editor.value = '';
-    if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'content', content: '' }));
-    }
-}
-
-// ============================================================================
-// Save Modal
-// ============================================================================
-
-function showSaveModal() {
-    saveModal.classList.add('show');
-}
-
-function closeSaveModal() {
-    saveModal.classList.remove('show');
-}
-
-async function saveRoom() {
-    const password = document.getElementById('savePassword').value;
-    const maxViews = document.getElementById('maxViews').value;
-    const expiresIn = document.getElementById('expiresIn').value;
-    const persistent = document.getElementById('persistentCheck').checked;
-
-    if (!password) {
-        showToast('Mot de passe requis', true);
-        return;
-    }
-
-    try {
-        const res = await fetch(`/api/room/${roomId}/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                password,
-                max_views: maxViews ? parseInt(maxViews) : null,
-                expires_in: parseInt(expiresIn),
-                persistent
-            })
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            if (data.persistent) {
-                showToast('Room sauvegardée !');
-                persistentBadge.style.display = 'inline';
-            } else {
-                showToast('Room protégée (temporaire)');
-                persistentBadge.style.display = 'inline';
-                persistentBadge.textContent = 'Protégée';
-                persistentBadge.style.background = 'var(--yellow)';
-            }
-            closeSaveModal();
-        } else {
-            showToast('Erreur de sauvegarde', true);
-        }
-    } catch (e) {
-        showToast('Erreur réseau', true);
-    }
-}
-
-// ============================================================================
-// Files
-// ============================================================================
-
-async function loadFiles() {
-    try {
-        const res = await fetch(`/api/room/${roomId}/files`);
-        files = await res.json();
-        renderFiles();
-    } catch (e) {
-        console.error('Failed to load files:', e);
-    }
-}
-
-function renderFiles() {
-    filesList.innerHTML = '';
-    filesCount.textContent = files.length;
-
-    files.forEach(file => {
-        const el = createFileElement(file);
-        filesList.appendChild(el);
-    });
-}
-
-function addFileToList(file) {
-    if (!files.find(f => f.id === file.id)) {
-        files.push(file);
-        renderFiles();
-    }
-}
-
-function removeFileFromList(fileId) {
-    files = files.filter(f => f.id !== fileId);
-    renderFiles();
-}
-
-function createFileElement(file) {
-    const div = document.createElement('div');
-    div.className = 'file-item';
-    div.dataset.fileId = file.id;
-
-    const icon = getFileIcon(file.mime_type);
-    const size = formatSize(file.size);
-
-    div.innerHTML = `
-        <span class="file-icon">${icon}</span>
-        <div class="file-info">
-            <div class="file-name" title="${file.name}">${file.name}</div>
-            <div class="file-meta">
-                <span>${size}</span>
-                ${file.is_p2p ? '<span class="file-p2p">P2P</span>' : ''}
-            </div>
-        </div>
-        <div class="file-actions">
-            <button class="file-btn download" onclick="downloadFile('${file.id}', ${file.is_p2p})" title="Télécharger">
-                &darr;
-            </button>
-            <button class="file-btn delete" onclick="deleteFile('${file.id}')" title="Supprimer">
-                &times;
-            </button>
-        </div>
-    `;
-
-    return div;
-}
-
-function getFileIcon(mimeType) {
-    if (mimeType.startsWith('image/')) return '🖼';
-    if (mimeType.startsWith('video/')) return '🎬';
-    if (mimeType.startsWith('audio/')) return '🎵';
-    if (mimeType.includes('pdf')) return '📄';
-    if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('tar')) return '📦';
-    if (mimeType.includes('text') || mimeType.includes('javascript') || mimeType.includes('json')) return '📝';
-    return '📎';
-}
-
-function formatSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-// ============================================================================
-// Drag & Drop
-// ============================================================================
-
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-});
-
-dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('dragover');
-});
-
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    handleFiles(e.dataTransfer.files);
-});
-
-fileInput.addEventListener('change', (e) => {
-    handleFiles(e.target.files);
-    fileInput.value = '';
-});
-
-async function handleFiles(fileList) {
-    for (const file of fileList) {
-        if (file.size > maxFileSize) {
-            showToast(`${file.name} trop volumineux (max ${formatSize(maxFileSize)})`, true);
-            continue;
-        }
-        await uploadFile(file);
-    }
-}
-
-async function uploadFile(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('owner_id', userId);
-
-    // If P2P, keep data locally
-    if (file.size > p2pThreshold) {
-        const arrayBuffer = await file.arrayBuffer();
-        // Store temporarily until upload confirms
-        const tempId = 'temp_' + Date.now();
-        p2pFiles.set(tempId, { data: arrayBuffer, name: file.name });
-    }
-
-    try {
-        const res = await fetch(`/api/room/${roomId}/files`, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (res.ok) {
-            const result = await res.json();
-            if (result.file.is_p2p) {
-                // Move data to correct file ID
-                const arrayBuffer = await file.arrayBuffer();
-                p2pFiles.set(result.file.id, { data: arrayBuffer, name: file.name });
-            }
-            showToast(`${file.name} uploadé !`);
-        } else {
-            const err = await res.json();
-            showToast(err.error || 'Erreur upload', true);
-        }
-    } catch (e) {
-        showToast('Erreur réseau', true);
-    }
-}
-
-async function downloadFile(fileId, isP2P) {
-    if (isP2P) {
-        // Check if we have it locally
-        if (p2pFiles.has(fileId)) {
-            const { data, name } = p2pFiles.get(fileId);
-            downloadBlob(new Blob([data]), name);
-            return;
-        }
-        // Request from owner via P2P
-        ws.send(JSON.stringify({ type: 'p2p_request', file_id: fileId }));
-        showToast('Demande P2P envoyée...');
-        return;
-    }
-
-    // Direct download
-    window.open(`/api/room/${roomId}/files/${fileId}`, '_blank');
-}
-
-function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-async function deleteFile(fileId) {
-    try {
-        const res = await fetch(`/api/room/${roomId}/files/${fileId}`, {
-            method: 'DELETE'
-        });
-        if (res.ok) {
-            p2pFiles.delete(fileId);
-            showToast('Fichier supprimé');
-        }
-    } catch (e) {
-        showToast('Erreur suppression', true);
-    }
-}
-
-// ============================================================================
-// P2P WebRTC
-// ============================================================================
-
-const rtcConfig = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' }
-    ]
-};
-
-function handleP2PRequest(fromPeer, fileId) {
-    // Someone wants a file we own
-    if (!p2pFiles.has(fileId)) return;
-
-    const pc = new RTCPeerConnection(rtcConfig);
-    peerConnections.set(fromPeer, pc);
-
-    const channel = pc.createDataChannel('file');
-    channel.binaryType = 'arraybuffer';
-
-    channel.onopen = () => {
-        const { data, name } = p2pFiles.get(fileId);
-        // Send metadata first
-        channel.send(JSON.stringify({ type: 'meta', name, size: data.byteLength }));
-        // Send file in chunks
-        const chunkSize = 16384;
-        for (let i = 0; i < data.byteLength; i += chunkSize) {
-            channel.send(data.slice(i, i + chunkSize));
-        }
-        channel.send(JSON.stringify({ type: 'done' }));
-    };
-
-    pc.onicecandidate = (e) => {
-        if (e.candidate) {
-            ws.send(JSON.stringify({
-                type: 'p2p_signal',
-                to: fromPeer,
-                signal: { type: 'candidate', candidate: e.candidate }
-            }));
-        }
-    };
-
-    pc.createOffer().then(offer => {
-        pc.setLocalDescription(offer);
-        ws.send(JSON.stringify({
-            type: 'p2p_signal',
-            to: fromPeer,
-            signal: { type: 'offer', sdp: offer }
-        }));
-    });
-}
-
-function handleP2PSignal(fromPeer, signal) {
-    if (signal.type === 'offer') {
-        // Receiving an offer - we requested a file
-        const pc = new RTCPeerConnection(rtcConfig);
-        peerConnections.set(fromPeer, pc);
-
-        let fileMeta = null;
-        let chunks = [];
-
-        pc.ondatachannel = (e) => {
-            const channel = e.channel;
-            channel.binaryType = 'arraybuffer';
-
-            channel.onmessage = (msg) => {
-                if (typeof msg.data === 'string') {
-                    const data = JSON.parse(msg.data);
-                    if (data.type === 'meta') {
-                        fileMeta = data;
-                        showToast(`Réception: ${data.name}`);
-                    } else if (data.type === 'done') {
-                        const blob = new Blob(chunks);
-                        downloadBlob(blob, fileMeta.name);
-                        showToast('Téléchargement P2P terminé !');
-                        pc.close();
-                        peerConnections.delete(fromPeer);
-                    }
-                } else {
-                    chunks.push(msg.data);
-                }
-            };
-        };
-
-        pc.onicecandidate = (e) => {
-            if (e.candidate) {
-                ws.send(JSON.stringify({
-                    type: 'p2p_signal',
-                    to: fromPeer,
-                    signal: { type: 'candidate', candidate: e.candidate }
-                }));
-            }
-        };
-
-        pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-        pc.createAnswer().then(answer => {
-            pc.setLocalDescription(answer);
-            ws.send(JSON.stringify({
-                type: 'p2p_signal',
-                to: fromPeer,
-                signal: { type: 'answer', sdp: answer }
-            }));
-        });
-
-    } else if (signal.type === 'answer') {
-        const pc = peerConnections.get(fromPeer);
-        if (pc) {
-            pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-        }
-
-    } else if (signal.type === 'candidate') {
-        const pc = peerConnections.get(fromPeer);
-        if (pc) {
-            pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-        }
-    }
-}
-
-// ============================================================================
-// Init
-// ============================================================================
-
-fetch(`/api/room/${roomId}/info`)
-    .then(r => r.json())
-    .then(info => {
-        if (info.is_persistent) {
-            persistentBadge.style.display = 'inline';
-        }
-    });
-
-connect();
-{% endblock %}
+{% block scripts %}<script src="/static/room.js"></script>{% endblock %}

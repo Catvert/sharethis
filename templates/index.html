@@ -102,7 +102,7 @@ h1 {
     <a href="/new" class="create-btn">+ Nouvelle room</a>
     <div class="join-section">
         <input type="text" class="input join-input" id="roomId" placeholder="Code room">
-        <button class="btn btn-info join-btn" onclick="joinRoom()">Rejoindre</button>
+        <button class="btn btn-info join-btn" id="joinBtn">Rejoindre</button>
     </div>
     <div class="features">
         <div class="feature">
@@ -124,13 +124,4 @@ h1 {
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
-function joinRoom() {
-    const id = document.getElementById('roomId').value.trim();
-    if (id) window.location.href = '/room/' + id;
-}
-
-document.getElementById('roomId').addEventListener('keypress', e => {
-    if (e.key === 'Enter') joinRoom();
-});
-{% endblock %}
+{% block scripts %}<script src="/static/index.js"></script>{% endblock %}
