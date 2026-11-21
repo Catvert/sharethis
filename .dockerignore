@@ -6,3 +6,5 @@ target/
 Dockerfile
 docker-compose.yml
 *.md
+data/
+tests/

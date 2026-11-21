@@ -10,12 +10,19 @@ services:
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
       - P2P_THRESHOLD=${P2P_THRESHOLD:-5242880}
       - DATABASE_PATH=/app/data/sharethis.db
+      - DATABASE_URL=${DATABASE_URL:-}
+      - STORAGE_DIR=/app/data/files
+      - ROOM_QUOTA=${ROOM_QUOTA:-104857600}
+      - STORAGE_QUOTA=${STORAGE_QUOTA:-5368709120}
+      # Behind Caddy: real client IP comes from X-Forwarded-For
+      - TRUST_PROXY=true
+      - COOKIE_SECURE=true
     volumes:
       - sharethis-data:/app/data
     networks:
       - caddy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3

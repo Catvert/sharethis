@@ -1,7 +1,8 @@
 # Build
 /target/
 
-# Database
+# Database & uploaded files
+/data/
 *.db
 *.db-journal
 
