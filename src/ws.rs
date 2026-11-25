@@ -92,7 +92,7 @@ pub async fn websocket_handler(
     if !origin_allowed(&headers, state.config.trust_proxy) {
         return ApiError::new(StatusCode::FORBIDDEN, "Origine refusée").into_response();
     }
-    let ip = ip_key(client_ip(&headers, peer, state.config.trust_proxy));
+    let ip = ip_key(client_ip(&headers, peer, &state.config));
     if !state.limiter.hit(format!("ws:{ip}"), 30, 60) {
         return ApiError::too_many().into_response();
     }

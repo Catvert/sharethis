@@ -13,7 +13,7 @@ use axum::{
 use dashmap::DashMap;
 use rand::{RngExt, distr::Alphanumeric};
 
-use crate::{error::ApiError, state::AppState};
+use crate::{config::Config, error::ApiError, state::AppState};
 
 /// Length of generated room IDs: 16 base62 chars ≈ 95 bits of entropy.
 pub const ROOM_ID_LEN: usize = 16;
@@ -113,10 +113,22 @@ pub fn content_disposition(name: &str) -> String {
 // Client identification
 // ============================================================================
 
-/// Client IP. `X-Forwarded-For` is only honoured when `trust_proxy` is set; the
-/// last entry is used since it is the one appended by our own reverse proxy.
-pub fn client_ip(headers: &HeaderMap, peer: SocketAddr, trust_proxy: bool) -> IpAddr {
-    if trust_proxy
+/// Client IP, in order of preference:
+/// 1. the `ip_header` header (e.g. `CF-Connecting-IP`), when configured;
+/// 2. the last `X-Forwarded-For` entry, when `trust_proxy` is set (it is the
+///    one appended by our own reverse proxy);
+/// 3. the TCP peer address.
+pub fn client_ip(headers: &HeaderMap, peer: SocketAddr, config: &Config) -> IpAddr {
+    if let Some(ip) = config
+        .ip_header
+        .as_ref()
+        .and_then(|name| headers.get(name))
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.trim().parse::<IpAddr>().ok())
+    {
+        return ip;
+    }
+    if config.trust_proxy
         && let Some(ip) = headers
             .get("x-forwarded-for")
             .and_then(|v| v.to_str().ok())
@@ -221,7 +233,7 @@ pub async fn rate_limit_middleware(
     req: Request,
     next: Next,
 ) -> Response {
-    let ip = client_ip(req.headers(), peer, state.config.trust_proxy);
+    let ip = client_ip(req.headers(), peer, &state.config);
     if !state.limiter.hit(format!("req:{}", ip_key(ip)), 600, 60) {
         return ApiError::too_many().into_response();
     }
@@ -230,6 +242,8 @@ pub async fn rate_limit_middleware(
 
 #[cfg(test)]
 mod tests {
+    use axum::http::HeaderName;
+
     use super::*;
 
     #[test]
@@ -255,6 +269,32 @@ mod tests {
         assert!(!is_valid_room_id(""));
         assert!(!is_safe_id("a-b"));
         assert_eq!(random_id(ROOM_ID_LEN).len(), ROOM_ID_LEN);
+    }
+
+    #[test]
+    fn client_ip_sources() {
+        let peer: SocketAddr = "10.0.0.1:1234".parse().unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "1.1.1.1, 172.70.0.1".parse().unwrap());
+        headers.insert("cf-connecting-ip", " 2001:db8::1 ".parse().unwrap());
+
+        let mut config = Config::default();
+        assert_eq!(client_ip(&headers, peer, &config), peer.ip());
+
+        config.trust_proxy = true;
+        assert_eq!(client_ip(&headers, peer, &config).to_string(), "172.70.0.1");
+
+        config.ip_header = Some(HeaderName::from_static("cf-connecting-ip"));
+        assert_eq!(
+            client_ip(&headers, peer, &config).to_string(),
+            "2001:db8::1"
+        );
+
+        // Missing or invalid header: falls back to X-Forwarded-For / peer.
+        headers.insert("cf-connecting-ip", "garbage".parse().unwrap());
+        assert_eq!(client_ip(&headers, peer, &config).to_string(), "172.70.0.1");
+        config.trust_proxy = false;
+        assert_eq!(client_ip(&headers, peer, &config), peer.ip());
     }
 
     #[test]

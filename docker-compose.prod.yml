@@ -16,6 +16,8 @@ services:
       - STORAGE_QUOTA=${STORAGE_QUOTA:-5368709120}
       # Behind Caddy: real client IP comes from X-Forwarded-For
       - TRUST_PROXY=true
+      # Behind Cloudflare: set IP_HEADER=CF-Connecting-IP (visitor IP)
+      - IP_HEADER=${IP_HEADER:-}
       - COOKIE_SECURE=true
     volumes:
       - sharethis-data:/app/data

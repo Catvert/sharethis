@@ -1,5 +1,7 @@
 use std::{env, path::PathBuf, str::FromStr, time::Duration};
 
+use axum::http::HeaderName;
+
 const MB: u64 = 1024 * 1024;
 
 #[derive(Clone, Debug)]
@@ -31,6 +33,11 @@ pub struct Config {
     pub sweep_interval: Duration,
     /// Read the client IP from `X-Forwarded-For` (only behind a reverse proxy).
     pub trust_proxy: bool,
+    /// Header holding the client IP set by a trusted edge proxy (e.g.
+    /// `CF-Connecting-IP` behind Cloudflare). Takes precedence over
+    /// `X-Forwarded-For`; only set it when clients cannot reach the app
+    /// without going through that proxy.
+    pub ip_header: Option<HeaderName>,
     /// Add the `Secure` attribute to cookies (HTTPS deployments).
     pub cookie_secure: bool,
     /// bcrypt work factor for room passwords (4..=31).
@@ -54,6 +61,7 @@ impl Default for Config {
             room_idle_grace: 300,
             sweep_interval: Duration::from_secs(30),
             trust_proxy: false,
+            ip_header: None,
             cookie_secure: false,
             bcrypt_cost: 12,
         }
@@ -71,6 +79,21 @@ fn env_bool(key: &str) -> Option<bool> {
             "1" | "true" | "yes" | "on"
         )
     })
+}
+
+fn env_header(key: &str) -> Option<HeaderName> {
+    let v = env::var(key).ok()?;
+    let v = v.trim();
+    if v.is_empty() {
+        return None;
+    }
+    match HeaderName::from_bytes(v.as_bytes()) {
+        Ok(name) => Some(name),
+        Err(_) => {
+            tracing::warn!("{key}: invalid header name {v:?}, ignored");
+            None
+        }
+    }
 }
 
 impl Config {
@@ -108,6 +131,7 @@ impl Config {
                 .map(Duration::from_secs)
                 .unwrap_or(d.sweep_interval),
             trust_proxy: env_bool("TRUST_PROXY").unwrap_or(d.trust_proxy),
+            ip_header: env_header("IP_HEADER"),
             cookie_secure: env_bool("COOKIE_SECURE").unwrap_or(d.cookie_secure),
             bcrypt_cost: env_parse("BCRYPT_COST")
                 .unwrap_or(d.bcrypt_cost)

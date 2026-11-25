@@ -147,7 +147,7 @@ pub async fn save_room(
     Json(payload): Json<SaveRoomRequest>,
 ) -> ApiResult<Json<Value>> {
     ensure_room_id(&room_id)?;
-    let ip = ip_key(client_ip(&headers, peer, state.config.trust_proxy));
+    let ip = ip_key(client_ip(&headers, peer, &state.config));
     if !state.limiter.hit(format!("save:{ip}"), 10, 60) {
         return Err(ApiError::too_many());
     }
@@ -232,7 +232,7 @@ pub async fn unlock_room(
     ensure_room_id(&room_id)?;
 
     // Every attempt counts, so parallel requests cannot bypass the limits.
-    let ip = ip_key(client_ip(&headers, peer, state.config.trust_proxy));
+    let ip = ip_key(client_ip(&headers, peer, &state.config));
     let allowed = state.limiter.hit(format!("unlock:{ip}:{room_id}"), 10, 900)
         && state.limiter.hit(format!("unlock:{ip}"), 50, 3600)
         && state

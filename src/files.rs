@@ -215,7 +215,7 @@ pub async fn upload_file(
     mut multipart: Multipart,
 ) -> ApiResult<Json<Value>> {
     ensure_room_id(&room_id)?;
-    let ip = ip_key(client_ip(&headers, peer, state.config.trust_proxy));
+    let ip = ip_key(client_ip(&headers, peer, &state.config));
     if !state.limiter.hit(format!("upload:{ip}"), 60, 60) {
         return Err(ApiError::too_many());
     }
